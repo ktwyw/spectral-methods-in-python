@@ -1,0 +1,31 @@
+name: notebooks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 6 1 * *"   # monthly, to catch breakage from new NumPy, SciPy or Matplotlib releases
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: requirements*.txt
+      - run: pip install -r requirements-dev.txt
+      # Unit tests of the shared toolbox.
+      - run: pytest tests/
+      # Executes every notebook and solution from top to bottom; any failed assert fails the build.
+      - run: pytest --nbmake --nbmake-timeout=600 notebooks/ solutions/
